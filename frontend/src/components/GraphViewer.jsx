@@ -55,8 +55,8 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
   useEffect(() => {
     // Smooth the visual movement per user instruction
     if (fgRef.current) {
-        fgRef.current.d3Force('charge').strength(-120);
-        fgRef.current.d3Force('link').distance(40);
+        fgRef.current.d3Force('charge').strength(-150);
+        fgRef.current.d3Force('link').distance(30);
     }
   }, [graphData]); // Re-trigger on data load
 
@@ -97,6 +97,7 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
         linkWidth={1.5}
         linkColor={() => 'rgba(71, 85, 105, 0.4)'}
         d3VelocityDecay={0.3}
+        warmupTicks={100}
         onNodeClick={handleNodeClick}
         nodeCanvasObjectMode={() => 'after'}
         nodeCanvasObject={(node, ctx, globalScale) => {
