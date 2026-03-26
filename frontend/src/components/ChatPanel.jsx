@@ -24,10 +24,12 @@ export default function ChatPanel({ setHighlightIds }) {
   const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
-
-    const userMsg = input.trim();
-    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    await processMessage(input.trim());
     setInput('');
+  };
+
+  const processMessage = async (userMsg) => {
+    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
     setLoading(true);
 
     try {
@@ -99,7 +101,21 @@ export default function ChatPanel({ setHighlightIds }) {
         )}
       </div>
 
-      <div className="p-4 bg-[#0f172a] border-t border-slate-800">
+      <div className="p-4 bg-[#0f172a] border-t border-slate-800 flex flex-col space-y-3">
+        {/* Suggested Queries */}
+        <div className="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide">
+          {["Show overdue invoices", "Which customers have open deliveries?", "Trace Sales Order Flow"].map((q, i) => (
+             <button 
+                key={i}
+                onClick={() => { setInput(''); processMessage(q); }}
+                disabled={loading}
+                className="whitespace-nowrap px-3 py-1.5 text-xs font-medium bg-slate-800 text-blue-400 hover:bg-slate-700 hover:text-white border border-blue-900/30 rounded-full transition-colors disabled:opacity-50"
+             >
+                {q}
+             </button>
+          ))}
+        </div>
+        
         <form onSubmit={handleSend} className="flex space-x-3 bg-slate-800 p-1.5 rounded-xl border border-slate-700 shadow-inner">
           <input 
             type="text" 
