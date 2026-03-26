@@ -1,0 +1,20 @@
+# Node
+node_modules/
+.next/
+node_tools/
+node.zip
+
+# Python
+__pycache__/
+*.pyc
+.env
+.venv
+env/
+venv/
+
+# Database
+backend/data.db
+
+# OS
+.DS_Store
+Thumbs.db

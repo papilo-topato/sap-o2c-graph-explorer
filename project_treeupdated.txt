@@ -1,0 +1,147 @@
+Folder PATH listing for volume OS
+Volume serial number is 82A0-DA09
+C:.
+¦   .gitignore
+¦   project_treeupdated.txt
+¦   README.md
+¦   TECHNICAL DESIGN DOCUMENT.pdf
+¦   
++---backend
+¦   ¦   ingest_data.py
+¦   ¦   main.py
+¦   ¦   render.yaml
+¦   ¦   requirements.txt
+¦   ¦   start.sh
+¦   ¦   
+¦   +---cognitive
+¦   ¦       guardrail.py
+¦   ¦       llm_client.py
+¦   ¦       prompt_builder.py
+¦   ¦       validator.py
+¦   ¦       __init__.py
+¦   ¦       
+¦   +---graph
+¦           graph_api.py
+¦           __init__.py
+¦           
++---frontend
+¦   ¦   .env.local
+¦   ¦   .gitignore
+¦   ¦   AGENTS.md
+¦   ¦   CLAUDE.md
+¦   ¦   eslint.config.mjs
+¦   ¦   jsconfig.json
+¦   ¦   next.config.mjs
+¦   ¦   package-lock.json
+¦   ¦   package.json
+¦   ¦   postcss.config.mjs
+¦   ¦   README.md
+¦   ¦   
+¦   +---public
+¦   ¦       file.svg
+¦   ¦       globe.svg
+¦   ¦       next.svg
+¦   ¦       vercel.svg
+¦   ¦       window.svg
+¦   ¦       
+¦   +---src
+¦       +---app
+¦       ¦       favicon.ico
+¦       ¦       globals.css
+¦       ¦       layout.js
+¦       ¦       page.js
+¦       ¦       
+¦       +---components
+¦       ¦       ChatPanel.jsx
+¦       ¦       GraphViewer.jsx
+¦       ¦       NodeInspector.jsx
+¦       ¦       
+¦       +---lib
++---sap-o2c-data
+    +---billing_document_cancellations
+    ¦       part-20251119-133433-51.jsonl
+    ¦       
+    +---billing_document_headers
+    ¦       part-20251119-133433-228.jsonl
+    ¦       part-20251119-133433-936.jsonl
+    ¦       
+    +---billing_document_items
+    ¦       part-20251119-133432-233.jsonl
+    ¦       part-20251119-133432-978.jsonl
+    ¦       
+    +---business_partners
+    ¦       part-20251119-133435-168.jsonl
+    ¦       
+    +---business_partner_addresses
+    ¦       part-20251119-133436-580.jsonl
+    ¦       
+    +---customer_company_assignments
+    ¦       part-20251119-133436-59.jsonl
+    ¦       
+    +---customer_sales_area_assignments
+    ¦       part-20251119-133437-884.jsonl
+    ¦       
+    +---journal_entry_items_accounts_receivable
+    ¦       part-20251119-133433-74.jsonl
+    ¦       part-20251119-133434-273.jsonl
+    ¦       part-20251119-133434-581.jsonl
+    ¦       part-20251119-133434-669.jsonl
+    ¦       
+    +---outbound_delivery_headers
+    ¦       part-20251119-133431-414.jsonl
+    ¦       
+    +---outbound_delivery_items
+    ¦       part-20251119-133431-439.jsonl
+    ¦       part-20251119-133431-626.jsonl
+    ¦       
+    +---payments_accounts_receivable
+    ¦       part-20251119-133434-100.jsonl
+    ¦       
+    +---plants
+    ¦       part-20251119-133445-279.jsonl
+    ¦       
+    +---products
+    ¦       part-20251119-133438-390.jsonl
+    ¦       part-20251119-133438-730.jsonl
+    ¦       
+    +---product_descriptions
+    ¦       part-20251119-133438-106.jsonl
+    ¦       part-20251119-133438-991.jsonl
+    ¦       
+    +---product_plants
+    ¦       part-20251119-133439-232.jsonl
+    ¦       part-20251119-133439-488.jsonl
+    ¦       part-20251119-133439-814.jsonl
+    ¦       part-20251119-133440-467.jsonl
+    ¦       
+    +---product_storage_locations
+    ¦       part-20251119-133440-440.jsonl
+    ¦       part-20251119-133440-895.jsonl
+    ¦       part-20251119-133441-19.jsonl
+    ¦       part-20251119-133441-417.jsonl
+    ¦       part-20251119-133441-547.jsonl
+    ¦       part-20251119-133441-889.jsonl
+    ¦       part-20251119-133442-116.jsonl
+    ¦       part-20251119-133442-150.jsonl
+    ¦       part-20251119-133442-95.jsonl
+    ¦       part-20251119-133442-967.jsonl
+    ¦       part-20251119-133443-26.jsonl
+    ¦       part-20251119-133443-270.jsonl
+    ¦       part-20251119-133443-397.jsonl
+    ¦       part-20251119-133443-6.jsonl
+    ¦       part-20251119-133444-294.jsonl
+    ¦       part-20251119-133444-415.jsonl
+    ¦       part-20251119-133444-49.jsonl
+    ¦       part-20251119-133444-881.jsonl
+    ¦       
+    +---sales_order_headers
+    ¦       part-20251119-133429-440.jsonl
+    ¦       
+    +---sales_order_items
+    ¦       part-20251119-133429-452.jsonl
+    ¦       part-20251119-133430-214.jsonl
+    ¦       
+    +---sales_order_schedule_lines
+            part-20251119-133430-302.jsonl
+            part-20251119-133430-979.jsonl
+            
