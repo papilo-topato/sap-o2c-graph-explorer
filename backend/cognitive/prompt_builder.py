@@ -40,6 +40,9 @@ GOLDEN JOIN PATHS:
 - To link Billing to Orders, join `billing_document_items` to `sales_order_items` using `referenceSdDocument`. (Or join `billing_document_items` directly to `salesOrder` if referring to that).
 - If the user provides a natural language name (like 'TechCorp') but you don't have the ID, generate a SQL query using `LIKE` against the relevant name columns (like `businessPartnerFullName` for customers).
 
+COLUMN MAPPING:
+- When referring to products in item tables (like `sales_order_items`, `billing_document_items`, etc), always use the column `material`. Never use the word `product` as a column name!
+
 Use precisely these camelCase columns. If asking for order count, do COUNT(salesOrder). If asking for total amount, sum totalNetAmount.
 """
 
