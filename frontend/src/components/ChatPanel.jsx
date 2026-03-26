@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Download } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -49,10 +49,27 @@ export default function ChatPanel({ setHighlightIds }) {
     }
   };
 
+  const handleExport = () => {
+    const jsonBlob = new Blob([JSON.stringify(messages, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(jsonBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `o2c_chat_export_${new Date().getTime()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#1e293b] text-slate-100 flex-1 border-l border-slate-700/50 shadow-2xl">
-      <div className="p-5 bg-[#0f172a] border-b border-slate-800 font-bold text-xl flex items-center shadow-md">
-        <span className="bg-gradient-to-r from-blue-400 via-teal-400 to-emerald-400 text-transparent bg-clip-text drop-shadow-sm">O2C Graph Query</span>
+      <div className="px-5 py-4 bg-[#0f172a] border-b border-slate-800 font-bold text-[17px] flex items-center justify-between shadow-md shrink-0">
+        <span className="bg-gradient-to-r from-blue-400 via-teal-400 to-emerald-400 text-transparent bg-clip-text drop-shadow-sm tracking-wide">Analyst Copilot</span>
+        <button 
+           onClick={handleExport}
+           className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-lg transition-all border border-slate-700 flex items-center shadow-sm"
+           title="Export Chat to JSON"
+        >
+           <Download className="h-4 w-4" />
+        </button>
       </div>
       
       <div className="flex-1 overflow-y-auto p-5 space-y-6 scroll-smooth" ref={scrollRef}>

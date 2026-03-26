@@ -1,8 +1,9 @@
 // src/components/GraphViewer.jsx
-'use client';
 import React, { useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
+import { Download } from 'lucide-react';
+import * as d3 from 'd3-force';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -55,8 +56,9 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
   useEffect(() => {
     // Smooth the visual movement per user instruction
     if (fgRef.current) {
-        fgRef.current.d3Force('charge').strength(-150);
-        fgRef.current.d3Force('link').distance(30);
+        fgRef.current.d3Force('charge').strength(-400);
+        fgRef.current.d3Force('link').distance(20);
+        fgRef.current.d3Force('center', d3.forceCenter(0, 0));
     }
   }, [graphData]); // Re-trigger on data load
 
@@ -76,10 +78,19 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
   }, [searchedNodeId, graphData.nodes, handleNodeClick, onNodeSelect]);
 
   return (
-    <div className="w-full h-full bg-[#0b1120] overflow-hidden relative border-r border-slate-700/50">
+    <div className="w-full h-full bg-[#0b1120] overflow-hidden relative border-r border-slate-700/50 group">
       {/* Visual Legend */}
       <div className="absolute top-4 right-4 z-10 bg-slate-900/80 p-3 rounded-lg border border-slate-700 backdrop-blur-sm shadow-xl text-xs space-y-2 select-none pointers-events-none">
-        <div className="font-semibold text-slate-300 border-b border-slate-700 pb-1 mb-1">Graph Legend</div>
+        <div className="font-semibold text-slate-300 border-b border-slate-700 pb-1 mb-1 flex justify-between items-center">
+            <span>Graph Legend</span>
+            <button 
+                onClick={() => { if(fgRef.current && fgRef.current.exportImg) fgRef.current.exportImg(); }} 
+                className="pointer-events-auto shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-300 p-1 rounded transition-colors ml-4 ring-1 ring-slate-600 outline-none"
+                title="Export Image"
+            >
+                <Download className="w-3.5 h-3.5" />
+            </button>
+        </div>
         <div className="flex items-center"><span className="w-3 h-3 rounded-full bg-blue-500 mr-2"></span><span className="text-slate-300">Sales Order</span></div>
         <div className="flex items-center"><span className="w-3 h-3 rounded-full bg-teal-500 mr-2"></span><span className="text-slate-300">Delivery</span></div>
         <div className="flex items-center"><span className="w-3 h-3 rounded-full bg-amber-500 mr-2"></span><span className="text-slate-300">Invoice</span></div>
@@ -101,8 +112,8 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
         onNodeClick={handleNodeClick}
         nodeCanvasObjectMode={() => 'after'}
         nodeCanvasObject={(node, ctx, globalScale) => {
-          // Draw Glowing Ring if highlighted from chat
-          if (highlightIds && highlightIds.includes(node.node_id)) {
+          // Draw Glowing Ring if highlighted from chat (CAST TO STRING TO PREVENT INT COLLISION BUGS)
+          if (highlightIds && highlightIds.includes(String(node.node_id))) {
             ctx.beginPath();
             ctx.arc(node.x, node.y, 10, 0, 2 * Math.PI, false);
             ctx.fillStyle = 'rgba(239, 68, 68, 0.3)'; // Red glow inside
