@@ -9,6 +9,10 @@ import NodeInspector from '@/components/NodeInspector';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const PANEL_STORAGE_KEY = 'o2c-right-panel-state';
+const DEFAULT_PANEL_STATE = {
+  chat: { visible: true, collapsed: false },
+  inspector: { visible: true, collapsed: false },
+};
 
 // Error Boundary definition
 class ErrorBoundary extends React.Component {
@@ -46,29 +50,27 @@ export default function Home() {
   const [searchedNodeId, setSearchedNodeId] = useState(null);
   const chatPanelRef = useRef(null);
   const inspectorPanelRef = useRef(null);
-  const [panelState, setPanelState] = useState({
-    chat: { visible: true, collapsed: false },
-    inspector: { visible: true, collapsed: false },
-  });
-
-  useEffect(() => {
+  const [panelState, setPanelState] = useState(() => {
     if (typeof window === 'undefined') {
-      return;
+      return DEFAULT_PANEL_STATE;
     }
 
     try {
       const saved = window.localStorage.getItem(PANEL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setPanelState(prev => ({
-          chat: { ...prev.chat, ...(parsed.chat || {}) },
-          inspector: { ...prev.inspector, ...(parsed.inspector || {}) },
-        }));
+      if (!saved) {
+        return DEFAULT_PANEL_STATE;
       }
+
+      const parsed = JSON.parse(saved);
+      return {
+        chat: { ...DEFAULT_PANEL_STATE.chat, ...(parsed.chat || {}) },
+        inspector: { ...DEFAULT_PANEL_STATE.inspector, ...(parsed.inspector || {}) },
+      };
     } catch (storageError) {
       console.warn('Failed to restore panel state', storageError);
+      return DEFAULT_PANEL_STATE;
     }
-  }, []);
+  });
 
   useEffect(() => {
     if (!panelState.chat.visible || !chatPanelRef.current) {

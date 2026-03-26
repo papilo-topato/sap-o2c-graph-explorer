@@ -201,17 +201,29 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
   }, [graphData]); // Re-trigger on data load
 
   useEffect(() => {
+    let frameId;
+
     if (searchedNodeId && fgRef.current && graphData.nodes.length > 0) {
         const targetNode = graphData.nodes.find(n => n.node_id === searchedNodeId);
-        if (targetNode) {
-            focusNode(targetNode);
-        } else {
-            handleNodeClick({ node_id: searchedNodeId, node_type: 'Searched', label: 'Searched Node' });
-        }
+        frameId = requestAnimationFrame(() => {
+          if (targetNode) {
+              focusNode(targetNode);
+          } else {
+              handleNodeClick({ node_id: searchedNodeId, node_type: 'Searched', label: 'Searched Node' });
+          }
+        });
     }
+
+    return () => {
+      if (frameId) {
+        cancelAnimationFrame(frameId);
+      }
+    };
   }, [searchedNodeId, graphData.nodes, handleNodeClick, focusNode]);
 
   useEffect(() => {
+    let frameId;
+
     if (!selectedNodeId || focusNodeIds.size === 0) {
       return;
     }
@@ -222,11 +234,17 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
     }
 
     const { nodeIds, linkIds } = collectConnectedSubgraph(selectedNodeId);
-    requestAnimationFrame(() => {
+    frameId = requestAnimationFrame(() => {
       setFocusNodeIds(nodeIds);
       setFocusLinkIds(linkIds);
       onNodeSelect(refreshedNode);
     });
+
+    return () => {
+      if (frameId) {
+        cancelAnimationFrame(frameId);
+      }
+    };
   }, [collectConnectedSubgraph, getNodeId, graphData, onNodeSelect, selectedNodeId, focusNodeIds.size]);
 
   useEffect(() => {
