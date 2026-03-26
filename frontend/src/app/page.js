@@ -109,12 +109,18 @@ export default function Home() {
   // Search logic
   useEffect(() => {
     if (searchQuery.length < 2) {
-        setSearchResults([]);
+        requestAnimationFrame(() => {
+          setSearchResults([]);
+        });
         return;
     }
     const timer = setTimeout(() => {
         axios.get(`${API_URL}/api/search?q=${encodeURIComponent(searchQuery)}`)
-            .then(res => setSearchResults(res.data.results))
+            .then(res => {
+              requestAnimationFrame(() => {
+                setSearchResults(res.data.results);
+              });
+            })
             .catch(err => console.error(err));
     }, 250);
     return () => clearTimeout(timer);

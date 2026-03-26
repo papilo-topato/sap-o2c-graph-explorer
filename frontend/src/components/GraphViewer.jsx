@@ -222,9 +222,11 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
     }
 
     const { nodeIds, linkIds } = collectConnectedSubgraph(selectedNodeId);
-    setFocusNodeIds(nodeIds);
-    setFocusLinkIds(linkIds);
-    onNodeSelect(refreshedNode);
+    requestAnimationFrame(() => {
+      setFocusNodeIds(nodeIds);
+      setFocusLinkIds(linkIds);
+      onNodeSelect(refreshedNode);
+    });
   }, [collectConnectedSubgraph, getNodeId, graphData, onNodeSelect, selectedNodeId, focusNodeIds.size]);
 
   useEffect(() => {
