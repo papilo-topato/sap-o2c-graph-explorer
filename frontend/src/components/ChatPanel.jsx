@@ -3,11 +3,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import { Send, Loader2, Download } from 'lucide-react';
+import { Download, Loader2, Minus, Send, X } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-export default function ChatPanel({ setHighlightIds }) {
+export default function ChatPanel({
+  setHighlightIds,
+  isCollapsed = false,
+  onClose,
+  onMinimize,
+  onRestore,
+}) {
   const [messages, setMessages] = useState([
     { role: 'ai', content: "Hello! I am the O2C Graph AI. Ask me anything about Sales Orders, Customers, Deliveries, or Invoices.", sql: null }
   ]);
@@ -63,15 +69,51 @@ export default function ChatPanel({ setHighlightIds }) {
 
   return (
     <div className="flex flex-col h-full bg-[#1e293b] text-slate-100 flex-1 border-l border-slate-700/50 shadow-2xl">
-      <div className="px-5 py-4 bg-[#0f172a] border-b border-slate-800 font-bold text-[17px] flex items-center justify-between shadow-md shrink-0">
-        <span className="bg-gradient-to-r from-blue-400 via-teal-400 to-emerald-400 text-transparent bg-clip-text drop-shadow-sm tracking-wide">Analyst Copilot</span>
-        <button 
-           onClick={handleExport}
-           className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-lg transition-all border border-slate-700 flex items-center shadow-sm"
-           title="Export Chat to JSON"
-        >
-           <Download className="h-4 w-4" />
-        </button>
+      <div className="px-5 py-3 bg-[#0f172a] border-b border-slate-800 shadow-md shrink-0">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="bg-gradient-to-r from-blue-400 via-teal-400 to-emerald-400 text-transparent bg-clip-text drop-shadow-sm tracking-wide font-bold text-[17px]">
+              Analyst Copilot
+            </div>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.24em] text-slate-500">
+              Natural language to O2C SQL
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isCollapsed ? (
+              <button
+                onClick={onRestore}
+                className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-lg transition-all border border-slate-700 flex items-center shadow-sm"
+                title="Restore Copilot"
+              >
+                <Minus className="h-4 w-4 rotate-180" />
+              </button>
+            ) : (
+              <button
+                onClick={onMinimize}
+                className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-lg transition-all border border-slate-700 flex items-center shadow-sm"
+                title="Minimize Copilot"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+            )}
+            <button 
+               onClick={handleExport}
+               className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-lg transition-all border border-slate-700 flex items-center shadow-sm"
+               title="Export Chat to JSON"
+            >
+               <Download className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white bg-slate-800 hover:bg-red-500/20 p-2 rounded-lg transition-all border border-slate-700 hover:border-red-500/40 flex items-center shadow-sm"
+              title="Close Copilot"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
       
       <div className="flex-1 overflow-y-auto p-5 space-y-6 scroll-smooth" ref={scrollRef}>

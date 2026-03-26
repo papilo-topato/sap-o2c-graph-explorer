@@ -11,76 +11,159 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
 
 export default function GraphViewer({ graphData, setGraphData, onNodeSelect, highlightIds, searchedNodeId }) {
+  const containerRef = useRef(null);
   const fgRef = useRef();
+  const animationFrameRef = useRef(null);
 
   // UX Interaction States
   const [hoverNode, setHoverNode] = useState(null);
-  const [highlightNodes, setHighlightNodes] = useState(new Set());
-  const [highlightLinks, setHighlightLinks] = useState(new Set());
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [focusNodeIds, setFocusNodeIds] = useState(new Set());
+  const [focusLinkIds, setFocusLinkIds] = useState(new Set());
+  const [hoverNodeIds, setHoverNodeIds] = useState(new Set());
+  const [hoverLinkIds, setHoverLinkIds] = useState(new Set());
   const [isLegendOpen, setIsLegendOpen] = useState(true);
-
-  const getNodeColor = (node) => {
-    switch (node.node_type) {
-      case 'SalesOrder': return '#3b82f6'; // Blue
-      case 'Delivery': return '#14b8a6'; // Teal
-      case 'Invoice': return '#f59e0b'; // Amber
-      case 'Payment': return '#10b981'; // Green
-      case 'Customer': return '#8b5cf6'; // Purple
-      case 'Product': return '#8b5cf6'; // Purple
-      default: return '#9ca3af'; // Gray
-    }
-  };
 
   const getLinkColor = (link) => {
     // Subtle colors per flow logic if desired, defaulting for now
     return 'rgba(100, 116, 139, 0.4)'; // slate-500 equivalent but translucent
   };
 
-  const updateHighlight = () => {
-    setHighlightNodes(highlightNodes);
-    setHighlightLinks(highlightLinks);
+  const getNodeId = useCallback((node) => {
+    if (!node) {
+      return null;
+    }
+    return String(node.node_id ?? node.id);
+  }, []);
+
+  const getLinkNodeId = useCallback((endpoint) => {
+    if (!endpoint) {
+      return null;
+    }
+    return typeof endpoint === 'object' ? getNodeId(endpoint) : String(endpoint);
+  }, [getNodeId]);
+
+  const getLinkKey = useCallback((link) => {
+    const sourceId = getLinkNodeId(link.source ?? link.source_id);
+    const targetId = getLinkNodeId(link.target ?? link.target_id);
+    const relationType = link.relation_type || 'LINK';
+    return `${sourceId}-${relationType}-${targetId}`;
+  }, [getLinkNodeId]);
+
+  const getNodeColor = (node) => {
+    switch (node.node_type) {
+      case 'SalesOrder': return '#3b82f6';
+      case 'Delivery': return '#22c55e';
+      case 'Invoice': return '#f59e0b';
+      case 'Payment': return '#10b981';
+      case 'Customer': return '#a855f7';
+      case 'Product': return '#8b5cf6';
+      default: return '#94a3b8';
+    }
   };
 
   const handleNodeHover = node => {
     setHoverNode(node || null);
-
-    highlightNodes.clear();
-    highlightLinks.clear();
-    if (node) {
-      highlightNodes.add(node);
-      // Pre-compute neighbors for the dimming effect
-      graphData.links.forEach(link => {
-        const s = typeof link.source === 'object' ? link.source.node_id : link.source;
-        const t = typeof link.target === 'object' ? link.target.node_id : link.target;
-        if (s === node.node_id || t === node.node_id) {
-          highlightLinks.add(link);
-          highlightNodes.add(typeof link.source === 'object' ? link.source : graphData.nodes.find(n => n.node_id === s));
-          highlightNodes.add(typeof link.target === 'object' ? link.target : graphData.nodes.find(n => n.node_id === t));
-        }
-      });
+    if (!node) {
+      setHoverNodeIds(new Set());
+      setHoverLinkIds(new Set());
+      return;
     }
-    updateHighlight();
+
+    const nodeId = getNodeId(node);
+    const nextHoverNodes = new Set([nodeId]);
+    const nextHoverLinks = new Set();
+
+    graphData.links.forEach(link => {
+      const sourceId = getLinkNodeId(link.source);
+      const targetId = getLinkNodeId(link.target);
+      if (sourceId === nodeId || targetId === nodeId) {
+        nextHoverNodes.add(sourceId);
+        nextHoverNodes.add(targetId);
+        nextHoverLinks.add(getLinkKey(link));
+      }
+    });
+
+    setHoverNodeIds(nextHoverNodes);
+    setHoverLinkIds(nextHoverLinks);
   };
 
   const handleLinkHover = link => {
-    highlightNodes.clear();
-    highlightLinks.clear();
-    if (link) {
-      highlightLinks.add(link);
-      highlightNodes.add(typeof link.source === 'object' ? link.source : graphData.nodes.find(n => n.node_id === link.source));
-      highlightNodes.add(typeof link.target === 'object' ? link.target : graphData.nodes.find(n => n.node_id === link.target));
+    if (!link) {
+      setHoverNodeIds(new Set());
+      setHoverLinkIds(new Set());
+      return;
     }
-    updateHighlight();
+
+    const sourceId = getLinkNodeId(link.source);
+    const targetId = getLinkNodeId(link.target);
+    setHoverNodeIds(new Set([sourceId, targetId]));
+    setHoverLinkIds(new Set([getLinkKey(link)]));
   };
 
-  const handleNodeClick = useCallback((node) => {
-    onNodeSelect(node);
-    
-    // Zoom and highlight the specific sub-graph automatically!
-    if (fgRef.current) {
-        fgRef.current.centerAt(node.x, node.y, 800);
-        fgRef.current.zoom(3, 800);
+  const collectConnectedSubgraph = useCallback((rootId) => {
+    const visitedNodeIds = new Set();
+    const visitedLinkIds = new Set();
+    const queue = [String(rootId)];
+
+    while (queue.length > 0) {
+      const currentId = queue.shift();
+      if (visitedNodeIds.has(currentId)) {
+        continue;
+      }
+      visitedNodeIds.add(currentId);
+
+      graphData.links.forEach(link => {
+        const sourceId = getLinkNodeId(link.source);
+        const targetId = getLinkNodeId(link.target);
+        if (sourceId !== currentId && targetId !== currentId) {
+          return;
+        }
+
+        visitedLinkIds.add(getLinkKey(link));
+        const neighborId = sourceId === currentId ? targetId : sourceId;
+        if (neighborId && !visitedNodeIds.has(neighborId)) {
+          queue.push(neighborId);
+        }
+      });
     }
+
+    return {
+      nodeIds: visitedNodeIds,
+      linkIds: visitedLinkIds,
+    };
+  }, [getLinkKey, getLinkNodeId, graphData.links]);
+
+  const focusNode = useCallback((node) => {
+    const nodeId = getNodeId(node);
+    if (!nodeId) {
+      return;
+    }
+
+    const { nodeIds, linkIds } = collectConnectedSubgraph(nodeId);
+    setSelectedNodeId(nodeId);
+    setFocusNodeIds(nodeIds);
+    setFocusLinkIds(linkIds);
+    onNodeSelect(node);
+
+    if (fgRef.current && typeof node.x === 'number' && typeof node.y === 'number') {
+      fgRef.current.centerAt(node.x, node.y, 800);
+      fgRef.current.zoom(3, 800);
+    }
+  }, [collectConnectedSubgraph, getNodeId, onNodeSelect]);
+
+  const clearFocus = useCallback(() => {
+    setSelectedNodeId(null);
+    setFocusNodeIds(new Set());
+    setFocusLinkIds(new Set());
+    setHoverNode(null);
+    setHoverNodeIds(new Set());
+    setHoverLinkIds(new Set());
+    onNodeSelect(null);
+  }, [onNodeSelect]);
+
+  const handleNodeClick = useCallback((node) => {
+    focusNode(node);
     
     // Fetch neighbors to expand the graph dynamically
     axios.get(`${API_URL}/api/graph/neighbors/${node.node_id}`)
@@ -104,7 +187,7 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
         });
       })
       .catch(err => console.error("Failed to load neighbors", err));
-  }, [setGraphData, onNodeSelect]);
+  }, [focusNode, setGraphData]);
 
   useEffect(() => {
     if (fgRef.current) {
@@ -121,21 +204,85 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
     if (searchedNodeId && fgRef.current && graphData.nodes.length > 0) {
         const targetNode = graphData.nodes.find(n => n.node_id === searchedNodeId);
         if (targetNode) {
-            fgRef.current.centerAt(targetNode.x, targetNode.y, 1000);
-            fgRef.current.zoom(4, 1000);
-            onNodeSelect(targetNode);
+            focusNode(targetNode);
         } else {
             handleNodeClick({ node_id: searchedNodeId, node_type: 'Searched', label: 'Searched Node' });
         }
     }
-  }, [searchedNodeId, graphData.nodes, handleNodeClick, onNodeSelect]);
+  }, [searchedNodeId, graphData.nodes, handleNodeClick, focusNode]);
+
+  useEffect(() => {
+    if (!selectedNodeId || focusNodeIds.size === 0) {
+      return;
+    }
+
+    const refreshedNode = graphData.nodes.find(node => getNodeId(node) === selectedNodeId);
+    if (!refreshedNode) {
+      return;
+    }
+
+    const { nodeIds, linkIds } = collectConnectedSubgraph(selectedNodeId);
+    setFocusNodeIds(nodeIds);
+    setFocusLinkIds(linkIds);
+    onNodeSelect(refreshedNode);
+  }, [collectConnectedSubgraph, getNodeId, graphData, onNodeSelect, selectedNodeId, focusNodeIds.size]);
+
+  useEffect(() => {
+    if (focusNodeIds.size === 0) {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      return;
+    }
+
+    const animate = () => {
+      fgRef.current?.refresh();
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+  }, [focusNodeIds]);
 
   const handleZoomIn = () => fgRef.current && fgRef.current.zoom(fgRef.current.zoom() * 1.5, 400);
   const handleZoomOut = () => fgRef.current && fgRef.current.zoom(fgRef.current.zoom() / 1.5, 400);
   const handleFitAll = () => fgRef.current && fgRef.current.zoomToFit(800, 50);
 
+  const handleExportImage = useCallback(() => {
+    const sourceCanvas = containerRef.current?.querySelector('canvas');
+    if (!sourceCanvas) {
+      console.error('Graph canvas not found for export');
+      return;
+    }
+
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = sourceCanvas.width;
+    exportCanvas.height = sourceCanvas.height;
+
+    const context = exportCanvas.getContext('2d');
+    if (!context) {
+      console.error('Failed to create export canvas context');
+      return;
+    }
+
+    context.fillStyle = '#0b1120';
+    context.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+    context.drawImage(sourceCanvas, 0, 0);
+
+    const link = document.createElement('a');
+    link.href = exportCanvas.toDataURL('image/png');
+    link.download = `o2c-graph-${Date.now()}.png`;
+    link.click();
+  }, []);
+
   return (
-    <div className="w-full h-full bg-[#0b1120] relative group">
+    <div ref={containerRef} className="w-full h-full bg-[#0b1120] relative group">
         
       {/* Background Mask - Gentle Radial Gradient */}
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.05)_0%,rgba(11,17,32,1)_100%)] z-0"></div>
@@ -148,7 +295,7 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
                 <span>Graph Legend</span>
             </div>
             <button 
-                onClick={(e) => { e.stopPropagation(); if(fgRef.current && fgRef.current.exportImg) fgRef.current.exportImg(); }} 
+                onClick={(e) => { e.stopPropagation(); handleExportImage(); }} 
                 className="bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-white p-1.5 rounded transition-colors ring-1 ring-slate-600/50"
                 title="Export Image"
             >
@@ -182,17 +329,46 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
         nodeRelSize={8}
         
         // Edge Polish
-        linkWidth={link => highlightLinks.has(link) ? 3 : 1.5}
-        linkColor={link => highlightLinks.has(link) ? '#60a5fa' : getLinkColor(link)}
+        linkWidth={link => {
+          const linkKey = getLinkKey(link);
+          if (focusLinkIds.has(linkKey)) {
+            return 3.5;
+          }
+          if (hoverLinkIds.has(linkKey)) {
+            return 2.5;
+          }
+          return focusNodeIds.size > 0 ? 0.8 : 1.5;
+        }}
+        linkColor={link => {
+          const linkKey = getLinkKey(link);
+          if (focusLinkIds.has(linkKey)) {
+            return '#93c5fd';
+          }
+          if (hoverLinkIds.has(linkKey)) {
+            return '#60a5fa';
+          }
+          return focusNodeIds.size > 0 ? 'rgba(51, 65, 85, 0.28)' : getLinkColor(link);
+        }}
         linkDirectionalArrowLength={4}
         linkDirectionalArrowRelPos={1}
         linkCurvature={0.2}
 
         // Subgraph Hover Dimming
         nodeColor={node => {
-            const isDimmed = hoverNode && !highlightNodes.has(node);
+            const nodeId = getNodeId(node);
+            const isFocused = focusNodeIds.has(nodeId);
+            const isHovered = hoverNodeIds.has(nodeId);
             const baseColor = getNodeColor(node);
-            return isDimmed ? '#334155' : baseColor; // dim inactive nodes to dark slate
+
+            if (focusNodeIds.size > 0) {
+              return isFocused ? baseColor : '#334155';
+            }
+
+            if (hoverNode && !isHovered) {
+              return '#334155';
+            }
+
+            return baseColor;
         }}
         
         d3VelocityDecay={0.3}
@@ -202,28 +378,61 @@ export default function GraphViewer({ graphData, setGraphData, onNodeSelect, hig
         onNodeClick={handleNodeClick}
         onNodeHover={handleNodeHover}
         onLinkHover={handleLinkHover}
+        onBackgroundClick={clearFocus}
 
         // We disable default native tooltips completely because we are building a custom HTML React div instead
         nodeLabel={() => ''}
         
-        nodeCanvasObjectMode={() => 'after'}
+        nodeCanvasObjectMode={() => 'replace'}
         nodeCanvasObject={(node, ctx, globalScale) => {
-          // Draw Pulse/Glow Ring for Searched & LLM Extracted IDs
+          const nodeId = getNodeId(node);
+          const isFocused = focusNodeIds.has(nodeId);
+          const isHovered = hoverNodeIds.has(nodeId);
+          const isSelected = selectedNodeId === nodeId;
           const isTargeted = (searchedNodeId && searchedNodeId === node.node_id) || (highlightIds && highlightIds.includes(String(node.node_id)));
-          if (isTargeted) {
+          const pulse = Math.sin(Date.now() / 260) * 0.5 + 0.5;
+          const baseRadius = isSelected ? 7.5 : 6;
+          const baseColor = getNodeColor(node);
+          const nodeFill = focusNodeIds.size > 0
+            ? (isFocused ? baseColor : '#334155')
+            : (hoverNode && !isHovered ? '#334155' : baseColor);
+
+          if (isFocused || isTargeted) {
+            const glowRadius = baseRadius + 6 + pulse * 6;
+            const gradient = ctx.createRadialGradient(node.x, node.y, baseRadius, node.x, node.y, glowRadius);
+            gradient.addColorStop(0, `${baseColor}cc`);
+            gradient.addColorStop(1, `${baseColor}00`);
+
             ctx.beginPath();
-            ctx.arc(node.x, node.y, 14, 0, 2 * Math.PI, false);
-            ctx.fillStyle = 'rgba(239, 68, 68, 0.2)'; 
+            ctx.arc(node.x, node.y, glowRadius, 0, 2 * Math.PI, false);
+            ctx.fillStyle = gradient;
             ctx.fill();
-            
-            ctx.lineWidth = 2.5;
-            ctx.strokeStyle = '#ef4444'; // Red outer ping barrier
+
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, baseRadius + 2 + pulse * 2, 0, 2 * Math.PI, false);
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = `${baseColor}aa`;
             ctx.stroke();
           }
-          
-          // Force Node Labels explicitly on the canvas
-          const isDimmed = hoverNode && !highlightNodes.has(node);
-          if (!isDimmed && (globalScale >= 2 || hoverNode === node)) {
+
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, baseRadius, 0, 2 * Math.PI, false);
+          ctx.fillStyle = nodeFill;
+          ctx.fill();
+
+          if (isSelected) {
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+          } else if (isTargeted) {
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#ef4444';
+            ctx.stroke();
+          }
+
+          const shouldShowLabel = globalScale >= 2 || hoverNode === node || isFocused || isSelected;
+          const isDimmed = focusNodeIds.size > 0 ? !isFocused : (hoverNode && !isHovered);
+          if (!isDimmed && shouldShowLabel) {
             const label = String(node.label).substring(0, 20); // truncate super long titles
             const fontSize = Math.max(12 / globalScale, 4);
             ctx.font = `${fontSize}px Inter, Sans-Serif`;
